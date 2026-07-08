@@ -1,0 +1,527 @@
+// Cielo Fashion Boutique Management System — database schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ── Enums ─────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  STAFF
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum OrderStatus {
+  PENDING
+  CUTTING
+  SEWING
+  IRONING
+  FINISHED
+  DELIVERED
+}
+
+enum PayrollStatus {
+  PENDING
+  PAID
+}
+
+enum LoanStatus {
+  ACTIVE
+  PAID
+}
+
+enum LoanPaymentSource {
+  PAYROLL_DEDUCTION
+  MANUAL
+}
+
+enum InventoryCategory {
+  FABRIC
+  THREAD
+  BUTTONS
+  ZIPPERS
+  ELASTIC
+  NEEDLES
+  LABELS
+  PACKAGING
+  LINING
+  OTHER
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  BANK_TRANSFER
+  CARD
+  OTHER
+}
+
+enum EquipmentCategory {
+  SEWING_MACHINE
+  OVERLOCK_MACHINE
+  EMBROIDERY_MACHINE
+  STEAM_IRON
+  CUTTING_TABLE
+  FURNITURE
+  OTHER
+}
+
+enum EquipmentCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  OUT_OF_SERVICE
+}
+
+enum NotificationType {
+  PAYROLL_REMINDER
+  LOW_STOCK
+  LOAN_PAID
+  ORDER_DUE
+  EQUIPMENT_MAINTENANCE
+}
+
+// ── Auth / Users ─────────────────────────────────────────────────────────
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  purchases        Purchase[]
+  expenses         Expense[]
+  stockMovements   StockMovement[]
+  customerPayments CustomerPayment[]
+  activityLogs     ActivityLog[]
+}
+
+// ── People ───────────────────────────────────────────────────────────────
+
+model Employee {
+  id        Int            @id @default(autoincrement())
+  name      String
+  photoUrl  String?
+  phone     String
+  address   String?
+  position  String
+  hireDate  DateTime
+  status    EmployeeStatus @default(ACTIVE)
+  notes     String?        @db.Text
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  productions Production[]
+  loans       Loan[]
+  payrolls    Payroll[]
+  orders      Order[]
+
+  @@index([status])
+}
+
+model Customer {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String
+  email     String?
+  address   String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders           Order[]
+  customerPayments CustomerPayment[]
+
+  @@index([name])
+}
+
+model Supplier {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchases      Purchase[]
+  inventoryItems InventoryItem[]
+  equipment      Equipment[]
+  expenses       Expense[]
+}
+
+// ── Products & Orders ────────────────────────────────────────────────────
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String
+  paymentRate Decimal  @db.Decimal(12, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems  OrderItem[]
+  productions Production[]
+}
+
+model Order {
+  id                  Int         @id @default(autoincrement())
+  orderNumber         String      @unique
+  customerId          Int
+  customer            Customer    @relation(fields: [customerId], references: [id])
+  orderDate           DateTime
+  dueDate             DateTime
+  assignedEmployeeId  Int?
+  assignedEmployee    Employee?   @relation(fields: [assignedEmployeeId], references: [id])
+  fabric              String?
+  specialInstructions String?     @db.Text
+  status              OrderStatus @default(PENDING)
+  totalPrice          Decimal     @db.Decimal(12, 2)
+  deposit             Decimal     @default(0) @db.Decimal(12, 2)
+  remainingBalance    Decimal     @db.Decimal(12, 2)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  items    OrderItem[]
+  payments CustomerPayment[]
+
+  @@index([status])
+  @@index([dueDate])
+  @@index([customerId])
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Decimal @db.Decimal(12, 2)
+  subtotal  Decimal @db.Decimal(12, 2)
+
+  measurement Measurement?
+
+  @@index([orderId])
+}
+
+model Measurement {
+  id           Int       @id @default(autoincrement())
+  orderItemId  Int       @unique
+  orderItem    OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  chest        Decimal?  @db.Decimal(6, 2)
+  waist        Decimal?  @db.Decimal(6, 2)
+  hip          Decimal?  @db.Decimal(6, 2)
+  shoulder     Decimal?  @db.Decimal(6, 2)
+  sleeveLength Decimal?  @db.Decimal(6, 2)
+  inseam       Decimal?  @db.Decimal(6, 2)
+  length       Decimal?  @db.Decimal(6, 2)
+  neck         Decimal?  @db.Decimal(6, 2)
+  customFields Json?
+  notes        String?   @db.Text
+}
+
+// ── Production & Payroll ─────────────────────────────────────────────────
+
+model Production {
+  id           Int      @id @default(autoincrement())
+  date         DateTime
+  employeeId   Int
+  employee     Employee @relation(fields: [employeeId], references: [id])
+  productId    Int
+  product      Product  @relation(fields: [productId], references: [id])
+  quantity     Int
+  rateSnapshot Decimal  @db.Decimal(12, 2)
+  totalEarned  Decimal  @db.Decimal(12, 2)
+  payrollId    Int?
+  payroll      Payroll? @relation(fields: [payrollId], references: [id])
+  createdAt    DateTime @default(now())
+
+  payrollItem PayrollItem?
+
+  @@index([employeeId, date])
+  @@index([date])
+  @@index([payrollId])
+}
+
+model Payroll {
+  id            Int           @id @default(autoincrement())
+  employeeId    Int
+  employee      Employee      @relation(fields: [employeeId], references: [id])
+  weekEnding    DateTime
+  grossSalary   Decimal       @db.Decimal(12, 2)
+  loanDeduction Decimal       @default(0) @db.Decimal(12, 2)
+  remainingLoan Decimal       @default(0) @db.Decimal(12, 2)
+  netSalary     Decimal       @db.Decimal(12, 2)
+  paymentDate   DateTime?
+  status        PayrollStatus @default(PENDING)
+  notes         String?       @db.Text
+  createdAt     DateTime      @default(now())
+
+  productions Production[]
+  items       PayrollItem[]
+
+  @@unique([employeeId, weekEnding])
+  @@index([weekEnding])
+}
+
+model PayrollItem {
+  id           Int        @id @default(autoincrement())
+  payrollId    Int
+  payroll      Payroll    @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  productionId Int        @unique
+  production   Production @relation(fields: [productionId], references: [id])
+  amount       Decimal    @db.Decimal(12, 2)
+}
+
+// ── Loans ────────────────────────────────────────────────────────────────
+
+model Loan {
+  id         Int        @id @default(autoincrement())
+  employeeId Int
+  employee   Employee   @relation(fields: [employeeId], references: [id])
+  amount     Decimal    @db.Decimal(12, 2)
+  balance    Decimal    @db.Decimal(12, 2)
+  status     LoanStatus @default(ACTIVE)
+  issuedDate DateTime
+  notes      String?    @db.Text
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  payments LoanPayment[]
+
+  @@index([employeeId, status])
+}
+
+model LoanPayment {
+  id     Int               @id @default(autoincrement())
+  loanId Int
+  loan   Loan              @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  amount Decimal           @db.Decimal(12, 2)
+  source LoanPaymentSource
+  date   DateTime
+  notes  String?
+
+  @@index([loanId])
+}
+
+// ── Inventory & Purchases ────────────────────────────────────────────────
+
+model InventoryItem {
+  id            Int               @id @default(autoincrement())
+  name          String
+  category      InventoryCategory
+  unit          String
+  purchasePrice Decimal           @db.Decimal(12, 2)
+  supplierId    Int?
+  supplier      Supplier?         @relation(fields: [supplierId], references: [id])
+  minimumStock  Decimal           @db.Decimal(12, 2)
+  currentStock  Decimal           @default(0) @db.Decimal(12, 2)
+  location      String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  stockMovements StockMovement[]
+  purchaseItems  PurchaseItem[]
+
+  @@index([category])
+}
+
+model StockMovement {
+  id              Int               @id @default(autoincrement())
+  inventoryItemId Int
+  inventoryItem   InventoryItem     @relation(fields: [inventoryItemId], references: [id])
+  type            StockMovementType
+  quantity        Decimal           @db.Decimal(12, 2)
+  reason          String?
+  purchaseId      Int?
+  purchase        Purchase?         @relation(fields: [purchaseId], references: [id])
+  date            DateTime          @default(now())
+  recordedById    Int?
+  recordedBy      User?             @relation(fields: [recordedById], references: [id])
+
+  @@index([inventoryItemId, date])
+}
+
+model Purchase {
+  id            Int           @id @default(autoincrement())
+  supplierId    Int
+  supplier      Supplier      @relation(fields: [supplierId], references: [id])
+  date          DateTime
+  invoiceNumber String?
+  totalAmount   Decimal       @db.Decimal(12, 2)
+  paymentMethod PaymentMethod
+  notes         String?       @db.Text
+  recordedById  Int?
+  recordedBy    User?         @relation(fields: [recordedById], references: [id])
+  createdAt     DateTime      @default(now())
+
+  items          PurchaseItem[]
+  stockMovements StockMovement[]
+
+  @@index([date])
+}
+
+model PurchaseItem {
+  id              Int           @id @default(autoincrement())
+  purchaseId      Int
+  purchase        Purchase      @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  inventoryItemId Int
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  quantity        Decimal       @db.Decimal(12, 2)
+  unitPrice       Decimal       @db.Decimal(12, 2)
+  total           Decimal       @db.Decimal(12, 2)
+}
+
+// ── Expenses ─────────────────────────────────────────────────────────────
+
+model ExpenseCategory {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  expenses Expense[]
+}
+
+model Expense {
+  id            Int             @id @default(autoincrement())
+  date          DateTime
+  categoryId    Int
+  category      ExpenseCategory @relation(fields: [categoryId], references: [id])
+  item          String
+  description   String?         @db.Text
+  supplierId    Int?
+  supplier      Supplier?       @relation(fields: [supplierId], references: [id])
+  quantity      Decimal         @default(1) @db.Decimal(12, 2)
+  unitPrice     Decimal         @db.Decimal(12, 2)
+  totalCost     Decimal         @db.Decimal(12, 2)
+  paymentMethod PaymentMethod
+  receiptNumber String?
+  attachmentUrl String?
+  recordedById  Int?
+  recordedBy    User?           @relation(fields: [recordedById], references: [id])
+  createdAt     DateTime        @default(now())
+
+  @@index([date])
+  @@index([categoryId])
+}
+
+// ── Equipment ────────────────────────────────────────────────────────────
+
+model Equipment {
+  id             Int                @id @default(autoincrement())
+  name           String
+  category       EquipmentCategory
+  brand          String?
+  model          String?
+  serialNumber   String?
+  purchaseDate   DateTime?
+  purchasePrice  Decimal?           @db.Decimal(12, 2)
+  warrantyExpiry DateTime?
+  supplierId     Int?
+  supplier       Supplier?          @relation(fields: [supplierId], references: [id])
+  condition      EquipmentCondition @default(GOOD)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  maintenanceRecords EquipmentMaintenance[]
+
+  @@index([category])
+}
+
+model EquipmentMaintenance {
+  id                  Int       @id @default(autoincrement())
+  equipmentId         Int
+  equipment           Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  date                DateTime
+  description         String    @db.Text
+  cost                Decimal?  @db.Decimal(12, 2)
+  performedBy         String?
+  nextMaintenanceDate DateTime?
+  notes               String?   @db.Text
+
+  @@index([equipmentId])
+}
+
+// ── Income ───────────────────────────────────────────────────────────────
+
+model CustomerPayment {
+  id            Int           @id @default(autoincrement())
+  orderId       Int
+  order         Order         @relation(fields: [orderId], references: [id])
+  customerId    Int
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  amount        Decimal       @db.Decimal(12, 2)
+  paymentMethod PaymentMethod
+  date          DateTime
+  invoiceNumber String?
+  notes         String?
+  recordedById  Int?
+  recordedBy    User?         @relation(fields: [recordedById], references: [id])
+  createdAt     DateTime      @default(now())
+
+  @@index([orderId])
+  @@index([date])
+}
+
+// ── System ───────────────────────────────────────────────────────────────
+
+model Notification {
+  id                Int              @id @default(autoincrement())
+  type              NotificationType
+  title             String
+  message           String           @db.Text
+  isRead            Boolean          @default(false)
+  relatedEntityType String?
+  relatedEntityId   Int?
+  createdAt         DateTime         @default(now())
+
+  @@index([isRead])
+  @@index([type])
+}
+
+model ActivityLog {
+  id            Int      @id @default(autoincrement())
+  userId        Int?
+  user          User?    @relation(fields: [userId], references: [id])
+  action        String
+  entityType    String
+  entityId      Int?
+  previousValue Json?
+  newValue      Json?
+  timestamp     DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([timestamp])
+}
+
+model Settings {
+  id                      Int      @id @default(autoincrement())
+  businessName            String   @default("Cielo Fashion Boutique")
+  logoUrl                 String?
+  phone                   String?
+  email                   String?
+  address                 String?
+  currency                String   @default("RWF")
+  payrollDeductionPercent Decimal  @default(30) @db.Decimal(5, 2)
+  updatedAt               DateTime @updatedAt
+}
