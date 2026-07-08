@@ -15,7 +15,7 @@ export async function createProduct(values: ProductFormValues) {
     newValue: data,
   })
   revalidatePath("/products")
-  return product
+  return { id: product.id }
 }
 
 export async function updateProduct(id: number, values: ProductFormValues) {
@@ -28,7 +28,7 @@ export async function updateProduct(id: number, values: ProductFormValues) {
     newValue: data,
   })
   revalidatePath("/products")
-  return product
+  return { id: product.id }
 }
 
 export async function deleteProduct(id: number) {
