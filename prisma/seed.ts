@@ -26,12 +26,6 @@ const adapter = new PrismaMariaDb({
 })
 const prisma = new PrismaClient({ adapter })
 
-function daysAgo(days: number, base = new Date("2026-07-08")) {
-  const d = new Date(base)
-  d.setDate(d.getDate() - days)
-  return d
-}
-
 async function main() {
   console.log("Seeding Cielo MIS database...")
 
