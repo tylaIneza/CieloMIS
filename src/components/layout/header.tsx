@@ -25,7 +25,7 @@ export function Header({ name, email, unreadNotifications }: HeaderProps) {
   )
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background px-4 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background px-4 sm:px-6 print:hidden">
       <Sheet open={open} onOpenChange={setOpen}>
         <Button
           variant="ghost"
