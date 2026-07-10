@@ -16,11 +16,13 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { buildEmployeeColumns, type EmployeeRow } from "./columns"
 import { EmployeeForm } from "./employee-form"
 import { deleteEmployee } from "@/features/employees/actions"
+import { EMPLOYEE_LINKED_RECORDS_MESSAGE } from "@/features/employees/constants"
 
 export function EmployeesTable({ data }: { data: EmployeeRow[] }) {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<EmployeeRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<EmployeeRow | null>(null)
+  const [blockedTarget, setBlockedTarget] = useState<EmployeeRow | null>(null)
 
   const columns = useMemo(
     () =>
@@ -38,6 +40,21 @@ export function EmployeesTable({ data }: { data: EmployeeRow[] }) {
     if (!deleteTarget) return
     try {
       await deleteEmployee(deleteTarget.id)
+      toast.success("Employee deleted")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : ""
+      if (message === EMPLOYEE_LINKED_RECORDS_MESSAGE) {
+        setBlockedTarget(deleteTarget)
+      } else {
+        toast.error(message || "Could not delete employee")
+      }
+    }
+  }
+
+  async function handleForceDelete() {
+    if (!blockedTarget) return
+    try {
+      await deleteEmployee(blockedTarget.id, { force: true })
       toast.success("Employee deleted")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not delete employee")
@@ -82,6 +99,15 @@ export function EmployeesTable({ data }: { data: EmployeeRow[] }) {
         title="Delete employee?"
         description={`This will permanently delete ${deleteTarget?.name}. This cannot be undone.`}
         onConfirm={handleDelete}
+      />
+
+      <ConfirmDialog
+        open={!!blockedTarget}
+        onOpenChange={(open) => !open && setBlockedTarget(null)}
+        title="Can't delete employee"
+        description={`${EMPLOYEE_LINKED_RECORDS_MESSAGE} Or delete anyway to permanently remove ${blockedTarget?.name} along with their production, payroll, and loan records (linked orders will be kept but unassigned).`}
+        confirmLabel="Delete Anyway"
+        onConfirm={handleForceDelete}
       />
     </div>
   )

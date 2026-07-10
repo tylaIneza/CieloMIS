@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { logActivity } from "@/lib/activity-log"
 import { employeeSchema, type EmployeeFormValues } from "./schema"
+import { EMPLOYEE_LINKED_RECORDS_MESSAGE } from "./constants"
 
 function toEmployeeData(data: EmployeeFormValues) {
   return {
@@ -47,13 +48,26 @@ export async function updateEmployee(id: number, values: EmployeeFormValues) {
   return employee
 }
 
-export async function deleteEmployee(id: number) {
-  try {
-    await prisma.employee.delete({ where: { id } })
-  } catch {
-    throw new Error(
-      "This employee has linked orders, production, payroll, or loan records and can't be deleted. Set their status to Inactive instead."
-    )
+export async function deleteEmployee(id: number, options?: { force?: boolean }) {
+  if (!options?.force) {
+    try {
+      await prisma.employee.delete({ where: { id } })
+    } catch {
+      throw new Error(EMPLOYEE_LINKED_RECORDS_MESSAGE)
+    }
+  } else {
+    await prisma.$transaction([
+      prisma.order.updateMany({
+        where: { assignedEmployeeId: id },
+        data: { assignedEmployeeId: null },
+      }),
+      // Payroll must go first: it cascades away PayrollItem rows that
+      // otherwise hold a required FK into Production, blocking its deletion.
+      prisma.payroll.deleteMany({ where: { employeeId: id } }),
+      prisma.production.deleteMany({ where: { employeeId: id } }),
+      prisma.loan.deleteMany({ where: { employeeId: id } }),
+      prisma.employee.delete({ where: { id } }),
+    ])
   }
   await logActivity({ action: "DELETE", entityType: "Employee", entityId: id })
   revalidatePath("/employees")
