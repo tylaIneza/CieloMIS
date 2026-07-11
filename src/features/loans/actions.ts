@@ -59,9 +59,9 @@ export async function addRepayment(loanId: number, values: LoanAdjustmentValues)
   const currentBalance = Number(loan.balance)
 
   if (data.amount > currentBalance) {
-    throw new Error(
-      `Repayment can't exceed the remaining balance of RWF ${currentBalance.toLocaleString()}.`
-    )
+    return {
+      error: `Repayment can't exceed the remaining balance of RWF ${currentBalance.toLocaleString()}.`,
+    }
   }
 
   const newBalance = currentBalance - data.amount
@@ -111,7 +111,7 @@ export async function addRepayment(loanId: number, values: LoanAdjustmentValues)
 export async function deleteLoan(id: number) {
   const payments = await prisma.loanPayment.count({ where: { loanId: id } })
   if (payments > 0) {
-    throw new Error("This loan has repayment history and can't be deleted.")
+    return { error: "This loan has repayment history and can't be deleted." }
   }
   await prisma.loan.delete({ where: { id } })
   await logActivity({ action: "DELETE", entityType: "Loan", entityId: id })

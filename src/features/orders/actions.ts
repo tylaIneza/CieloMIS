@@ -146,7 +146,7 @@ export async function deleteOrder(id: number) {
   try {
     await prisma.order.delete({ where: { id } })
   } catch {
-    throw new Error("This order has linked payments and can't be deleted.")
+    return { error: "This order has linked payments and can't be deleted." }
   }
   await logActivity({ action: "DELETE", entityType: "Order", entityId: id })
   revalidatePath("/orders")

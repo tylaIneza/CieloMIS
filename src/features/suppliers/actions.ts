@@ -48,9 +48,9 @@ export async function deleteSupplier(id: number) {
   try {
     await prisma.supplier.delete({ where: { id } })
   } catch {
-    throw new Error(
-      "This supplier has linked purchases, inventory items, or equipment and can't be deleted."
-    )
+    return {
+      error: "This supplier has linked purchases, inventory items, or equipment and can't be deleted.",
+    }
   }
   await logActivity({ action: "DELETE", entityType: "Supplier", entityId: id })
   revalidatePath("/suppliers")

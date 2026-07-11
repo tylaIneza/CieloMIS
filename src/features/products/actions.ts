@@ -35,9 +35,10 @@ export async function deleteProduct(id: number) {
   try {
     await prisma.product.delete({ where: { id } })
   } catch {
-    throw new Error(
-      "This product is used by existing orders or production records and can't be deleted. Mark it inactive instead."
-    )
+    return {
+      error:
+        "This product is used by existing orders or production records and can't be deleted. Mark it inactive instead.",
+    }
   }
   await logActivity({ action: "DELETE", entityType: "Product", entityId: id })
   revalidatePath("/products")

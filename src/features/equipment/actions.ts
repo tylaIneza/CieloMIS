@@ -55,7 +55,7 @@ export async function deleteEquipment(id: number) {
   try {
     await prisma.equipment.delete({ where: { id } })
   } catch {
-    throw new Error("This equipment has maintenance history and can't be deleted.")
+    return { error: "This equipment has maintenance history and can't be deleted." }
   }
   await logActivity({ action: "DELETE", entityType: "Equipment", entityId: id })
   revalidatePath("/equipment")

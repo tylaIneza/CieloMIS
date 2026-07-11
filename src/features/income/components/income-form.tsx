@@ -51,7 +51,11 @@ export function IncomeForm({
 
   async function onSubmit(values: IncomeFormValues) {
     try {
-      await createIncome(values)
+      const result = await createIncome(values)
+      if (result?.error) {
+        toast.error(result.error)
+        return
+      }
       toast.success("Payment recorded")
       onSuccess()
     } catch (error) {

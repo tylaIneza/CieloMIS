@@ -32,8 +32,12 @@ export function CustomersTable({ data }: { data: CustomerRow[] }) {
   async function handleDelete() {
     if (!deleteTarget) return
     try {
-      await deleteCustomer(deleteTarget.id)
-      toast.success("Customer deleted")
+      const result = await deleteCustomer(deleteTarget.id)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success("Customer deleted")
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not delete customer")
     }

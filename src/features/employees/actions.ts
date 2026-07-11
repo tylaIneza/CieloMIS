@@ -53,7 +53,7 @@ export async function deleteEmployee(id: number, options?: { force?: boolean }) 
     try {
       await prisma.employee.delete({ where: { id } })
     } catch {
-      throw new Error(EMPLOYEE_LINKED_RECORDS_MESSAGE)
+      return { error: EMPLOYEE_LINKED_RECORDS_MESSAGE }
     }
   } else {
     await prisma.$transaction([

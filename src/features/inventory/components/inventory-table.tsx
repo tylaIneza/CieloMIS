@@ -46,8 +46,12 @@ export function InventoryTable({
   async function handleDelete() {
     if (!deleteTarget) return
     try {
-      await deleteInventoryItem(deleteTarget.id)
-      toast.success("Item deleted")
+      const result = await deleteInventoryItem(deleteTarget.id)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success("Item deleted")
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not delete item")
     }

@@ -41,8 +41,12 @@ export function EquipmentTable({ data, suppliers }: { data: EquipmentRow[]; supp
   async function handleDelete() {
     if (!deleteTarget) return
     try {
-      await deleteEquipment(deleteTarget.id)
-      toast.success("Equipment deleted")
+      const result = await deleteEquipment(deleteTarget.id)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success("Equipment deleted")
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not delete equipment")
     }

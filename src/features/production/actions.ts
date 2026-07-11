@@ -37,9 +37,9 @@ export async function createProduction(values: ProductionFormValues) {
 export async function deleteProduction(id: number) {
   const production = await prisma.production.findUniqueOrThrow({ where: { id } })
   if (production.payrollId) {
-    throw new Error(
-      "This production entry has already been included in a payroll run and can't be deleted."
-    )
+    return {
+      error: "This production entry has already been included in a payroll run and can't be deleted.",
+    }
   }
   await prisma.production.delete({ where: { id } })
   await logActivity({ action: "DELETE", entityType: "Production", entityId: id })

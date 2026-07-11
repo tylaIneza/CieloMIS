@@ -32,8 +32,12 @@ export function ProductsTable({ data }: { data: ProductRow[] }) {
   async function handleDelete() {
     if (!deleteTarget) return
     try {
-      await deleteProduct(deleteTarget.id)
-      toast.success("Product deleted")
+      const result = await deleteProduct(deleteTarget.id)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success("Product deleted")
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not delete product")
     }

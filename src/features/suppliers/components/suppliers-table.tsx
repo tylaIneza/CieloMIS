@@ -32,8 +32,12 @@ export function SuppliersTable({ data }: { data: SupplierRow[] }) {
   async function handleDelete() {
     if (!deleteTarget) return
     try {
-      await deleteSupplier(deleteTarget.id)
-      toast.success("Supplier deleted")
+      const result = await deleteSupplier(deleteTarget.id)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success("Supplier deleted")
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not delete supplier")
     }

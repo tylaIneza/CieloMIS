@@ -35,7 +35,11 @@ export function LoanAdjustmentForm({
         await increaseLoan(loanId, values)
         toast.success("Loan increased")
       } else {
-        await addRepayment(loanId, values)
+        const result = await addRepayment(loanId, values)
+        if (result?.error) {
+          toast.error(result.error)
+          return
+        }
         toast.success("Repayment recorded")
       }
       onSuccess()

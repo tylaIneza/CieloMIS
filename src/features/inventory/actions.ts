@@ -56,9 +56,9 @@ export async function deleteInventoryItem(id: number) {
   try {
     await prisma.inventoryItem.delete({ where: { id } })
   } catch {
-    throw new Error(
-      "This item has purchase or stock movement history and can't be deleted."
-    )
+    return {
+      error: "This item has purchase or stock movement history and can't be deleted.",
+    }
   }
   await logActivity({ action: "DELETE", entityType: "InventoryItem", entityId: id })
   revalidatePath("/inventory")

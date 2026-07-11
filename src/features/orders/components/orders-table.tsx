@@ -56,8 +56,12 @@ export function OrdersTable({
   async function handleDelete() {
     if (!deleteTarget) return
     try {
-      await deleteOrder(deleteTarget.id)
-      toast.success("Order deleted")
+      const result = await deleteOrder(deleteTarget.id)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success("Order deleted")
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not delete order")
     }

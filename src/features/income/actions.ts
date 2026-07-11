@@ -12,9 +12,9 @@ export async function createIncome(values: IncomeFormValues) {
   const remainingBalance = Number(order.remainingBalance)
 
   if (data.amount > remainingBalance) {
-    throw new Error(
-      `Payment can't exceed the remaining balance of RWF ${remainingBalance.toLocaleString()}.`
-    )
+    return {
+      error: `Payment can't exceed the remaining balance of RWF ${remainingBalance.toLocaleString()}.`,
+    }
   }
 
   const session = await auth()

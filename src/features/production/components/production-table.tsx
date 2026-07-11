@@ -40,8 +40,12 @@ export function ProductionTable({
   async function handleDelete() {
     if (!deleteTarget) return
     try {
-      await deleteProduction(deleteTarget.id)
-      toast.success("Production entry deleted")
+      const result = await deleteProduction(deleteTarget.id)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success("Production entry deleted")
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not delete entry")
     }

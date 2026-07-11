@@ -39,8 +39,12 @@ export function LoansTable({ data, employees }: { data: LoanRow[]; employees: Op
   async function handleDelete() {
     if (!deleteTarget) return
     try {
-      await deleteLoan(deleteTarget.id)
-      toast.success("Loan deleted")
+      const result = await deleteLoan(deleteTarget.id)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success("Loan deleted")
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not delete loan")
     }

@@ -48,9 +48,9 @@ export async function deleteCustomer(id: number) {
   try {
     await prisma.customer.delete({ where: { id } })
   } catch {
-    throw new Error(
-      "This customer has existing orders or payments and can't be deleted."
-    )
+    return {
+      error: "This customer has existing orders or payments and can't be deleted.",
+    }
   }
   await logActivity({ action: "DELETE", entityType: "Customer", entityId: id })
   revalidatePath("/customers")
